@@ -1,0 +1,25 @@
+{
+  "name": "context-bar",
+  "version": "0.3.0",
+  "description": "A full-width, color-segmented context window bar above the prompt, with handoff and compact buttons; ships /handoff and /handoff-resume",
+  "author": {
+    "name": "alisorcorp"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/alisorcorp/context-bar",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "handoffCommand": {
+      "type": "string",
+      "title": "Handoff command",
+      "description": "The slash command the handoff button runs, without the slash. The mod ships /handoff; name your own command here to use it instead. Leave it empty to hide the button. The button also hides when the command isn't installed.",
+      "default": "handoff"
+    },
+    "resumeCommand": {
+      "type": "string",
+      "title": "Resume command",
+      "description": "The slash command the handoff button runs right after a handoff, without the slash. The mod ships /handoff-resume. Leave it empty, or name a command that isn't installed, and the button always runs the handoff command.",
+      "default": "handoff-resume"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "context-bar",
+  "description": "context-bar, a Claude Code mod: a context window bar above the prompt, with handoff and compact buttons",
+  "owner": {
+    "name": "alisorcorp"
+  },
+  "plugins": [
+    {
+      "name": "context-bar",
+      "source": "./",
+      "description": "A full-width context window bar above the prompt, with handoff and compact buttons"
+    }
+  ]
+}
