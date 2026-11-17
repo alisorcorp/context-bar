@@ -264,6 +264,8 @@ async function confirmAndRun($: EngineInterface, action: Action, command: string
   if (kind) await update($, lastHandoff, () => kind)
   try {
     await $.command.run({ command })
+    // The mod's own run skips its command.run hook, so refresh here.
+    if (action === 'compact') void refresh($)
   } catch (error) {
     if (kind) await update($, lastHandoff, () => before)
     $.ui.toast(`Couldn't run /${command}: ${error instanceof Error ? error.message : String(error)}`)
@@ -286,12 +288,16 @@ export const register: Register = (on, options) => {
     resume: commandName(options.resumeCommand),
   }
 
-  // A typed handoff or resume command. The mod's own runs skip its hooks and
-  // are recorded in confirmAndRun instead.
+  // A typed handoff, resume or compact command. The mod's own runs skip its
+  // hooks and are handled in confirmAndRun instead.
   on('command.run', async ($, e, next) => {
     await record($, kindOf(e.command, config))
+    const result = await next(e)
+    // Redraw with the compacted numbers. A session.compact hook would do this
+    // too, but a built-in plugin that runs first can send that event past it.
+    if (bare(e.command) === 'compact') void refresh($)
 
-    return next(e)
+    return result
   })
 
   // The model running either one as a skill.
@@ -321,13 +327,6 @@ export const register: Register = (on, options) => {
   on('turn.step', async function* ($, e, next) {
     const result = yield* next(e)
     if (e.agentId === undefined) void refresh($)
-
-    return result
-  })
-
-  on('session.compact', async ($, e, next) => {
-    const result = await next(e)
-    void refresh($)
 
     return result
   })

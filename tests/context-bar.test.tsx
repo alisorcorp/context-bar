@@ -270,3 +270,51 @@ test('the commands the mod ships are found and run by their namespaced names', a
   expect(ran).toEqual(['context-bar:handoff', 'context-bar:handoff-resume'])
   await ui.unmount()
 })
+
+/** A window just compacted: no response yet, so the bar shows the local estimate. */
+const COMPACTED: SessionUsage = {
+  startedAt: 0,
+  context: { window: 1_000_000, breakdown: { ...BREAKDOWN, totalTokens: 52_000 } },
+  rateLimits: [],
+}
+
+/** Stands for the engine, switching the usage it reports once /compact has run. */
+function compactingEngine(on: Parameters<TestBody>[1]) {
+  let isCompacted = false
+  on('session.usage', () => ({ value: isCompacted ? COMPACTED : USAGE }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('command.list', () => ({ value: [{ name: 'compact', description: '', source: 'builtin' as const }] }))
+  on('tool.call', { tool: 'AskUserQuestion' }, (_, e) => {
+    const q = e.questions[0]
+
+    return { result: { questions: e.questions, answers: { [q?.question ?? '']: q?.options[0]?.label ?? '' } } }
+  })
+  on('command.run', (_, e) => {
+    if (e.command === 'compact') isCompacted = true
+
+    return { text: '' }
+  })
+}
+
+test('the bar redraws with the compacted numbers after the compact button', async ($, on) => {
+  compactingEngine(on)
+  await start($)
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await ui.find({ type: 'Text', text: /used/ }))?.text).toBe('48% used')
+  await ui.press({ key: 'compact' })
+  expect((await ui.find({ type: 'Text', text: /used/ }))?.text).toBe('~5% used')
+  expect((await ui.find({ type: 'Text', text: /\// }))?.text).toBe('~52k / 1M')
+  await ui.unmount()
+})
+
+test('the bar redraws after a typed /compact', async ($, on) => {
+  compactingEngine(on)
+  await start($)
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await ui.find({ type: 'Text', text: /used/ }))?.text).toBe('48% used')
+  await $.command.run({ command: 'compact', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
+  await ui.unmount()
+  const after = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await after.find({ type: 'Text', text: /used/ }))?.text).toBe('~5% used')
+  await after.unmount()
+})
